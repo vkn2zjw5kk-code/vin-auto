@@ -1,1 +1,119 @@
+<!DOCTYPE html>
+<html lang="bs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VIN Auto Finder</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#101216;color:#fff;font-family:Arial,sans-serif;padding:20px}
+.box{max-width:700px;margin:auto;background:#1b1e24;padding:22px;border-radius:18px}
+h1{text-align:center}
+input{width:100%;padding:16px;border-radius:10px;border:1px solid #555;background:#272b32;color:#fff;font-size:18px}
+button{width:100%;padding:16px;margin-top:12px;border:0;border-radius:10px;font-size:17px;font-weight:bold}
+#status{margin-top:15px;padding:12px;border-radius:10px}
+.row{display:flex;justify-content:space-between;gap:15px;background:#272b32;margin-top:8px;padding:12px;border-radius:9px}
+.label{color:#aaa}.value{text-align:right;font-weight:bold}
+</style>
+</head>
 
+<body>
+<div class="box">
+<h1>🔧 VIN AUTO FINDER</h1>
+
+<input id="vin" maxlength="17"
+placeholder="Unesi VIN, npr. WV1ZZZ2KZCX114251">
+
+<button onclick="searchVIN()">PRETRAŽI VIN</button>
+
+<div id="status"></div>
+<div id="results"></div>
+</div>
+
+<script>
+async function searchVIN(){
+
+const vin=document.getElementById("vin").value.trim().toUpperCase();
+const status=document.getElementById("status");
+const results=document.getElementById("results");
+
+results.innerHTML="";
+
+if(vin.length!==17){
+status.innerHTML="❌ VIN mora imati 17 znakova.";
+return;
+}
+
+status.innerHTML="⏳ Tražim podatke...";
+
+try{
+
+const url=
+"https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVinValuesExtended/"
++encodeURIComponent(vin)+"?format=json";
+
+const response=await fetch(url);
+
+if(!response.ok) throw new Error();
+
+const data=await response.json();
+const car=data.Results[0];
+
+const fields={
+"VIN":vin,
+"Marka":car.Make,
+"Model":car.Model,
+"Godište":car.ModelYear,
+"Motor":car.EngineModel,
+"Zapremina":car.DisplacementL,
+"Zapremina CC":car.DisplacementCC,
+"Snaga kW":car.EngineKW,
+"Snaga KS":car.EngineHP,
+"Gorivo":car.FuelTypePrimary,
+"Mjenjač":car.TransmissionStyle,
+"Broj brzina":car.TransmissionSpeeds,
+"Pogon":car.DriveType,
+"Karoserija":car.BodyClass,
+"Vrata":car.Doors,
+"Proizvođač":car.Manufacturer,
+"Zemlja proizvodnje":car.PlantCountry,
+"Grad proizvodnje":car.PlantCity,
+"Serija":car.Series,
+"Verzija":car.Trim
+};
+
+let html="";
+
+for(const [name,value] of Object.entries(fields)){
+if(value && value!=="0" && value!=="Not Applicable"){
+html+=`
+<div class="row">
+<span class="label">${name}</span>
+<span class="value">${value}</span>
+</div>`;
+}
+}
+
+if(html===""){
+status.innerHTML=
+"⚠️ VIN je prihvaćen, ali baza nema podatke za ovo vozilo.";
+}else{
+status.innerHTML="✅ Vozilo pronađeno";
+results.innerHTML=html;
+}
+
+}catch(error){
+
+status.innerHTML=
+"❌ Greška pri povezivanju sa bazom. Pokušaj ponovo.";
+}
+
+}
+
+document.getElementById("vin").addEventListener("input",function(){
+this.value=this.value.replace(/[^A-Za-z0-9]/g,"").toUpperCase();
+});
+</script>
+
+</body>
+</html>
